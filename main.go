@@ -26,7 +26,10 @@ func File2File(csvFilename, jsonFilename string, hasHeaderLine bool) error {
 
 	r := csv.NewReader(csvFile)
 
-	var elements = make(map[string]map[string]string)
+	var (
+		elements = make(map[string]map[string]string)
+		counter  = 0
+	)
 
 	if hasHeaderLine {
 		headers, err := r.Read()
@@ -34,7 +37,6 @@ func File2File(csvFilename, jsonFilename string, hasHeaderLine bool) error {
 			return errors.Wrap(err, "encountered an error attempting to read the header line")
 		}
 
-		counter := 0
 		for line, err := r.Read(); err != io.EOF; line, err = r.Read() {
 			innerMap := make(map[string]string)
 			for i := 0; i < len(line); i++ {
@@ -44,7 +46,6 @@ func File2File(csvFilename, jsonFilename string, hasHeaderLine bool) error {
 			counter++
 		}
 	} else {
-		counter := 0
 		for line, err := r.Read(); err != io.EOF; line, err = r.Read() {
 			innerMap := make(map[string]string)
 			for i := 0; i < len(line); i++ {
@@ -55,14 +56,84 @@ func File2File(csvFilename, jsonFilename string, hasHeaderLine bool) error {
 		}
 	}
 
-	file, err := json.MarshalIndent(elements, "", " ")
+	jsonData, err := json.MarshalIndent(elements, "", " ")
 	if err != nil {
 		return errors.Wrap(err, "json.Marhsal encountered an error attempting to Marshal(elements) into []byte")
 	}
 
-	err = ioutil.WriteFile(jsonFilename, file, 0644)
+	err = ioutil.WriteFile(jsonFilename, jsonData, 0644)
 	if err != nil {
 		return errors.Wrapf(err, "io.util encountered an error writing the marshalled json data (a []byte) to the filename %s", jsonFilename)
 	}
+	return nil
+}
+
+// File2InMemory pulls data from a csv file and returns it as a json marshalled slice of bytes, along with an error.
+// If the csv file contains an optional header line, set hasHeaderLine to true to use those header values to create a more descriptive json.
+func File2InMemory(csvFilename string, hasHeaderLine bool) ([]byte, error) {
+	csvFile, err := os.Open(csvFilename)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not open specified csv file, filename: %s", csvFilename)
+	}
+	defer csvFile.Close()
+
+	r := csv.NewReader(csvFile)
+
+	var (
+		elements = make(map[string]map[string]string)
+		counter  = 0
+	)
+
+	if hasHeaderLine {
+		headers, err := r.Read()
+		if err != nil {
+			return nil, errors.Wrap(err, "encountered an error attempting to read the header line")
+		}
+
+		for line, err := r.Read(); err != io.EOF; line, err = r.Read() {
+			innerMap := make(map[string]string)
+			for i := 0; i < len(line); i++ {
+				innerMap[headers[i]] = line[i]
+			}
+			elements[fmt.Sprintf("record_%d", counter)] = innerMap
+			counter++
+		}
+	} else {
+		for line, err := r.Read(); err != io.EOF; line, err = r.Read() {
+			innerMap := make(map[string]string)
+			for i := 0; i < len(line); i++ {
+				innerMap[fmt.Sprintf("field_%d", i)] = line[i]
+			}
+			elements[fmt.Sprintf("record_%d", counter)] = innerMap
+			counter++
+		}
+	}
+
+	jsonData, err := json.MarshalIndent(elements, "", " ")
+	if err != nil {
+		return nil, errors.Wrap(err, "json.Marhsal encountered an error attempting to Marshal(elements) into []byte")
+	}
+
+	return jsonData, nil
+}
+
+// InMemory2InMemory takes in csvData as a slice of bytes and returns it as a json marshalled slice of bytes, along with an error.
+func InMemory2InMemory(csvData []byte) ([]byte, error) {
+	output, err := json.MarshalIndent(csvData, "", " ")
+	return output, err
+}
+
+// InMemory2File takes in csvData as a slice of bytes and creates a json marshalled file, and returns an error.
+func InMemory2File(csvData []byte, jsonFilename string) error {
+	jsonData, err := json.MarshalIndent(csvData, "", " ")
+	if err != nil {
+		return errors.Wrap(err, "json.Marhsal encountered an error attempting to Marshal(csvData) into []byte")
+	}
+
+	err = ioutil.WriteFile(jsonFilename, jsonData, 0644)
+	if err != nil {
+		return errors.Wrapf(err, "io.util encountered an error writing the marshalled json data (a []byte) to the filename %s", jsonFilename)
+	}
+
 	return nil
 }
