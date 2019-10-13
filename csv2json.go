@@ -112,24 +112,3 @@ func File2InMemory(csvFilename string, hasHeaderLine bool) ([]byte, error) {
 
 	return jsonData, nil
 }
-
-// InMemory2InMemory takes in csvData as a slice of bytes and returns it as a json marshalled slice of bytes, along with an error.
-func InMemory2InMemory(csvData []byte) ([]byte, error) {
-	output, err := json.MarshalIndent(csvData, "", " ")
-	return output, err
-}
-
-// InMemory2File takes in csvData as a slice of bytes and creates a json marshalled file, and returns an error.
-func InMemory2File(csvData []byte, jsonFilename string) error {
-	jsonData, err := json.MarshalIndent(csvData, "", " ")
-	if err != nil {
-		return errors.Wrap(err, "json.Marhsal encountered an error attempting to Marshal(csvData) into []byte")
-	}
-
-	err = ioutil.WriteFile(jsonFilename, jsonData, 0644)
-	if err != nil {
-		return errors.Wrapf(err, "io.util encountered an error writing the marshalled json data (a []byte) to the filename %s", jsonFilename)
-	}
-
-	return nil
-}
