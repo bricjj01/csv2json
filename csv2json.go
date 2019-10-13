@@ -1,4 +1,4 @@
-package main
+package csv2json
 
 import (
 	"encoding/csv"
@@ -10,10 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 )
-
-func main() {
-	File2File("test.csv", "test.json", true)
-}
 
 // File2File pulls data from an RFC 4180 compliant csv file and uses it to create a json file.
 // If the csv file contains an optional header line, set hasHeaderLine to true to use those header values to create a more descriptive json.
